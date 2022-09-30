@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
@@ -22,6 +23,16 @@
 #define BUF_SIZE 256
 
 volatile int STOP = FALSE;
+int alarmEnabled = FALSE;
+int alarmCount = 0;
+
+void alarmHandler(int signal)
+{
+    alarmEnabled = FALSE;
+    alarmCount++;
+
+    printf("Alarm #%d\n", alarmCount);
+}
 
 int main(int argc, char *argv[])
 {
@@ -67,8 +78,8 @@ int main(int argc, char *argv[])
 
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
-    newtio.c_cc[VTIME] = 0; // Inter-character timer unused
-    newtio.c_cc[VMIN] = 5;  // Blocking read until 5 chars received
+    newtio.c_cc[VTIME] = 30; // Inter-character timer unused
+    newtio.c_cc[VMIN] = 0;  // Blocking read until 5 chars received
 
     // VTIME e VMIN should be changed in order to protect with a
     // timeout the reception of the following character(s)
@@ -91,20 +102,35 @@ int main(int argc, char *argv[])
 
     // Create string to send
     unsigned char buf[BUF_SIZE] = {0};
+    unsigned char bufAux[BUF_SIZE] = {0};
 
-    for (int i = 0; i < BUF_SIZE; i++)
-    {
-        buf[i] = 'a' + i % 26;
+    //read input and store
+    printf("Write here:\n");
+    gets(buf);
+    int len = strlen(buf);
+    (void)signal(SIGALRM, alarmHandler);
+
+    while (STOP == FALSE && alarmCount < 4){
+
+        int bytes = write(fd, buf, len);
+        printf("%d bytes written\n", bytes);
+
+        alarm(3); // Set alarm to be triggered in 3s
+
+        int bytesRead = read(fd, bufAux, BUF_SIZE);
+        bufAux[bytesRead] = '\0'; // Set end of string to '\0', so we can printf
+        
+
+        //Check the received string
+        if(strcmp(buf, bufAux)==0){
+            printf("Correctly received\n");
+            STOP = TRUE;
+        };
+
+        if (bufAux[0] == 'z')
+            STOP = TRUE;
     }
-
-    // In non-canonical mode, '\n' does not end the writing.
-    // Test this condition by placing a '\n' in the middle of the buffer.
-    // The whole buffer must be sent even with the '\n'.
-    buf[5] = '\n';
-
-    int bytes = write(fd, buf, BUF_SIZE);
-    printf("%d bytes written\n", bytes);
-
+    
     // Wait until all bytes have been written to the serial port
     sleep(1);
 
