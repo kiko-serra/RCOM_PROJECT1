@@ -100,12 +100,12 @@ int main(int argc, char *argv[])
         printf(":%s:%d\n", buf, bytes);
         if (buf[0] == 'z')
             STOP = TRUE;
+        else {
+            printf("Resending the string...\n");
+            int new_bytes = write(fd, buf, size);
+            printf("%d bytes written\n", new_bytes);
+        }
     }
-
-    printf("Resending the string...\n");
-
-    int new_bytes = write(fd, buf, size);
-    printf("%d bytes written\n", new_bytes);
     // The while() cycle should be changed in order to respect the specifications
     // of the protocol indicated in the Lab guide
 
