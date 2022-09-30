@@ -95,7 +95,8 @@ int main(int argc, char *argv[])
     {
         // Returns after 5 chars have been input
         int bytes = read(fd, buf, BUF_SIZE);
-        buf[bytes] = '\0'; // Set end of string to '\0', so we can printf
+        buf[bytes+1] = 'g';
+        buf[bytes+1] = '\0'; // Set end of string to '\0', so we can printf
         size = bytes;
         printf(":%s:%d\n", buf, bytes);
         if (buf[0] == 'z')
