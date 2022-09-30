@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     printf("Resending the string...\n");
 
     int new_bytes = write(fd, buf, size);
-    printf("%d bytes written\n", bytes);
+    printf("%d bytes written\n", new_bytes);
     // The while() cycle should be changed in order to respect the specifications
     // of the protocol indicated in the Lab guide
 
