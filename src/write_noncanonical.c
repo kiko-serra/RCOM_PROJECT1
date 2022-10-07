@@ -117,13 +117,8 @@ int main(int argc, char *argv[])
 
         alarm(3); // Set alarm to be triggered in 3s
 
-        int size = 0, bytesRead;
-
-        while (bytesRead = read(fd, bufAux, BUF_SIZE) == 0) {
-            bufAux[bytesRead+1] = '\0'; // Set end of string to '\0', so we can printf
-            buf[size] = strcopy(bufAux);
-            size += bytesRead;
-        }
+        int bytesRead = read(fd, bufAux, BUF_SIZE);
+        bufAux[bytesRead] = '\0'; // Set end of string to '\0', so we can printf
 
         //Check the received string
         if(strcmp(buf, bufAux)==0){

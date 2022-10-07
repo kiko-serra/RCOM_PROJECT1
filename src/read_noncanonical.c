@@ -92,15 +92,14 @@ int main(int argc, char *argv[])
     unsigned char buf[BUF_SIZE + 1] = {0}; // +1: Save space for the final '\0' char
     unsigned char aux_buf[BUF_SIZE + 1] = {0}; // +1: Save space for the final '\0' char
 
-    int size = 0, bytes;
+    int size;
     while (STOP == FALSE)
     {
-        while (bytes = read(fd, aux_buf, BUF_SIZE) == 0) {
-            aux_buf[bytes+1] = '\0';
-            buf[size] = strcopy(aux_buf);
-            size += bytes;
-        }
-        buf[size+1] = '\0'; // Set end of string to '\0', so we can printf
+        int bytes = read(fd, buf, BUF_SIZE);
+        buf[bytes+1] = 'g';
+        buf[bytes+1] = '\0'; // Set end of string to '\0', so we can printf
+        size = bytes;
+
         printf(":%s:%d\n", buf, bytes);
         if (buf[0] == 'z')
             STOP = TRUE;
