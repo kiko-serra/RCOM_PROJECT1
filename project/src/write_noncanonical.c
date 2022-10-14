@@ -12,6 +12,9 @@
 #include <unistd.h>
 #include <signal.h>
 
+#include "frame.h"
+#include "setstatemachine.h"
+
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
 #define BAUDRATE B38400
@@ -22,16 +25,27 @@
 
 #define BUF_SIZE 256
 
-volatile int STOP = FALSE;
+volatile int SSTOP = FALSE;
 int alarmEnabled = FALSE;
 int alarmCount = 0;
 
 void alarmHandler(int signal)
 {
-    alarmEnabled = FALSE;
+    alarmEnabled = TRUE;
     alarmCount++;
 
     printf("Alarm #%d\n", alarmCount);
+}
+
+void sendSetFrame(int fd, unsigned char* frame){
+    int bytes = write(fd, frame, 5);
+    if(bytes != 5){
+        perror("error: failed to send set frame.\n");
+        exit(-1);
+    } else
+        printf("INFO: SET frame sent.\n");
+
+    alarm(3);
 }
 
 int main(int argc, char *argv[])
@@ -78,7 +92,7 @@ int main(int argc, char *argv[])
 
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
-    newtio.c_cc[VTIME] = 0; // Inter-character timer unused
+    newtio.c_cc[VTIME] = 30; // Inter-character timer unused
     newtio.c_cc[VMIN] = 0;  // Blocking read until 5 chars received
 
     // VTIME e VMIN should be changed in order to protect with a
@@ -101,15 +115,73 @@ int main(int argc, char *argv[])
     printf("New termios structure set\n");
 
     // Create string to send
-    unsigned char buf[BUF_SIZE] = {0};
+    // unsigned char buf[BUF_SIZE] = {0};
     unsigned char bufAux[BUF_SIZE] = {0};
 
+    // State Machine to parse bytes
+    StateMachine *sm = createStateMachine(UA, RECEIVER);
+    if(sm == NULL){
+        perror("create state machine");
+        exit(-1);
+    }
+
+    // Build SET Frame to send
+    unsigned char set[FRAME_SIZE];
+    build_frame(SET, set);
+
+    // Buffer to store response
+    unsigned char buf[FRAME_SIZE];
+    int i = 0;
+
+    /*
     //read input and store
     printf("Write here:\n");
     gets(buf);
     int len = strlen(buf);
+    */
     (void)signal(SIGALRM, alarmHandler);
 
+    while(sm->state != STOP) {
+        // Send frame
+        sendSetFrame(fd, set);
+
+        // Wait for UA frame
+        while (i < FRAME_SIZE){
+            read(fd, buf + i, 1);
+
+            // VTIME is set to 30
+            // read will return when a byte is received or then 3 sec. passed
+            if(alarmEnabled)
+                break;
+
+            handleStateMachine(sm, buf[i++]);
+        }
+        // Check if alarm was fired
+        if(alarmEnabled){
+            // Give up after 3 tries
+            if(alarmCount == 3){
+                perror("error: give up sending SET frame\n");
+                exit(-1);
+            } else{
+                alarmEnabled = FALSE;
+                i = 0;
+            }
+        } else{
+            // Check if the FSM was completed (UA)
+            if (sm->state != STOP){
+                perror("error: not a ua frame\n");
+                exit(-1);
+            } else{
+                printf("INFO: UA frame received.\n");
+                // Cancel pending alarm
+                alarm(0);
+                break;
+            }
+        }
+    }
+
+    deleteStateMachine(sm);
+    /*
     while (STOP == FALSE && alarmCount < 4){
 
         int bytes = write(fd, buf, len);
@@ -130,7 +202,7 @@ int main(int argc, char *argv[])
         if (bufAux[0] == 'z')
             STOP = TRUE;
     }
-    
+    */
     // Wait until all bytes have been written to the serial port
     sleep(1);
 

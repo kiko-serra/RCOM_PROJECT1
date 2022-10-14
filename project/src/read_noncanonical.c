@@ -1,4 +1,4 @@
-// Write to serial port in non-canonical mode
+// Read from serial port in non-canonical mode
 //
 // Modified by: Eduardo Nuno Almeida [enalmeida@fe.up.pt]
 
@@ -10,7 +10,9 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
-#include <signal.h>
+
+#include "frame.h"
+#include "setstatemachine.h"
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
@@ -22,17 +24,7 @@
 
 #define BUF_SIZE 256
 
-volatile int STOP = FALSE;
-int alarmEnabled = FALSE;
-int alarmCount = 0;
-
-void alarmHandler(int signal)
-{
-    alarmEnabled = FALSE;
-    alarmCount++;
-
-    printf("Alarm #%d\n", alarmCount);
-}
+volatile int SSTOP = FALSE;
 
 int main(int argc, char *argv[])
 {
@@ -49,10 +41,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // Open serial port device for reading and writing, and not as controlling tty
+    // Open serial port device for reading and writing and not as controlling tty
     // because we don't want to get killed if linenoise sends CTRL-C.
     int fd = open(serialPortName, O_RDWR | O_NOCTTY);
-
     if (fd < 0)
     {
         perror(serialPortName);
@@ -79,7 +70,7 @@ int main(int argc, char *argv[])
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME] = 0; // Inter-character timer unused
-    newtio.c_cc[VMIN] = 0;  // Blocking read until 5 chars received
+    newtio.c_cc[VMIN] = 1;  // Blocking read until 5 chars received
 
     // VTIME e VMIN should be changed in order to protect with a
     // timeout the reception of the following character(s)
@@ -100,40 +91,58 @@ int main(int argc, char *argv[])
 
     printf("New termios structure set\n");
 
-    // Create string to send
-    unsigned char buf[BUF_SIZE] = {0};
-    unsigned char bufAux[BUF_SIZE] = {0};
-
-    //read input and store
-    printf("Write here:\n");
-    gets(buf);
-    int len = strlen(buf);
-    (void)signal(SIGALRM, alarmHandler);
-
-    while (STOP == FALSE && alarmCount < 4){
-
-        int bytes = write(fd, buf, len);
-        printf("%d bytes written\n", bytes);
-
-        alarm(3); // Set alarm to be triggered in 3s
-
-        int bytesRead = read(fd, bufAux, BUF_SIZE);
-        bufAux[bytesRead] = '\0'; // Set end of string to '\0', so we can printf
-
-        //Check the received string
-        if(strcmp(buf, bufAux)==0){
-            printf("%s -- %s\n", buf, bufAux);
-            printf("Correctly received\n");
-            STOP = TRUE;
-        };
-
-        if (bufAux[0] == 'z')
-            STOP = TRUE;
-    }
+    // Loop for input
+    // unsigned char buf[BUF_SIZE + 1] = {0}; // +1: Save space for the final '\0' char
+    unsigned char aux_buf[BUF_SIZE + 1] = {0}; // +1: Save space for the final '\0' char
     
-    // Wait until all bytes have been written to the serial port
-    sleep(1);
+    unsigned char buf[FRAME_SIZE];
+    int i = 0;
+    // State Machine to parse bytes
+    StateMachine *sm = createStateMachine(SET, TRANSMITTER);
+    if(sm == NULL){
+        perror("create state machine");
+        exit(-1);
+    }
 
+    while(sm->state != STOP){
+        // Read a frame
+        while (i < FRAME_SIZE){
+            read(fd, buf + i, 1);
+
+            handleStateMachine(sm, buf[i++]);
+        }
+
+        // Check if the FSM was completed (SET)
+        if(sm->state != STOP){
+            printf("error: not a set frame\n");
+            i = 0;
+        }
+        else
+            printf("INFO: SET frame received.\n");
+    }
+    /*
+    int size;
+    while (STOP == FALSE)
+    {
+        int bytes = read(fd, buf, BUF_SIZE);
+        buf[bytes+1] = 'g';
+        buf[bytes+1] = '\0'; // Set end of string to '\0', so we can printf
+        size = bytes;
+
+        printf("String received :%s\n", buf);
+        if (buf[0] == 'z')
+            STOP = TRUE;
+        else {
+            printf("Resending the string...\n");
+            int new_bytes = write(fd, buf, size);
+            printf("%d bytes written\n", new_bytes);
+        }
+    }
+    // The while() cycle should be changed in order to respect the specifications
+    // of the protocol indicated in the Lab guide
+    */
+
+    deleteStateMachine(sm);
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
     {
