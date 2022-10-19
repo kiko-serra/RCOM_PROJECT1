@@ -1,9 +1,36 @@
 // Application layer protocol implementation
 
+#include <string.h>
+#include <stdio.h>  
+
 #include "application_layer.h"
+#include "link_layer.h"
 
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
-    // TODO
+    LinkLayer ll;
+    strcpy(ll.serialPort, serialPort);
+    if(!strcmp(role, "tx")) {
+        ll.role = LlTx;
+    } else if(!strcmp(role, "rx")) {
+        ll.role = LlRx;
+    } else {
+        perror("error: role not defined");
+    }
+    ll.baudRate = baudRate;
+    ll.timeout = timeout;
+    ll.nRetransmissions = nTries;
+
+    if(!llopen(ll)) {
+        perror("error: llopen failed");
+    }
+
+    // JUST NEED TO READ
+
+    if (llclose(0) == -1) {
+        perror("error: failed to terminate connection\n");
+    } else {
+        printf("Closed connection successfuly\n");
+    }
 }

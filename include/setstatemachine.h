@@ -1,5 +1,5 @@
-#ifndef _setstatemachine_h_
-#define _setstatemachine_h_
+#ifndef _SETSTATEMACHINE_H_
+#define _SETSTATEMACHINE_H_
 
 #include "frame.h"
 
@@ -13,8 +13,8 @@ typedef enum States {
 } State;
 
 typedef enum EndTypes {
-    RECEIVER,
-    TRANSMITTER
+    TRANSMITTER,
+    RECEIVER
 } EndType;
 
 typedef struct StateMachines {
@@ -26,10 +26,13 @@ typedef struct StateMachines {
     FrameType frameType;
 } StateMachine;
 
-StateMachine *createStateMachine(FrameType FrameType, EndType end);
+unsigned char getAddressByte(FrameType ft, EndType end);
+unsigned char getControlByte(FrameType ft);
+
+StateMachine *createStateMachine(FrameType frameType, EndType end);
 void deleteStateMachine(StateMachine *sm);
 void changeState(StateMachine *sm, State state);
-void handleStateMachine(StateMachine *sm, unsigned char byte);
+void handleStateMachine(StateMachine *sm, unsigned char byte, unsigned char *frame);
 
 
-#endif // _setstatemachine_h_
+#endif // _SETSTATEMACHINE_H_

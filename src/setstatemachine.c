@@ -1,18 +1,25 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "setstatemachine.h"
 #include "frame.h"
 
-unsigned char getAddressByte(StateMachine *sm) {
-    if(sm->end == RECEIVER && sm->frameType == UA)
-        return A_RECEIVER_REP;
-    if(sm->end == TRANSMITTER && sm->frameType == SET)
-        return A_TRANSMITTER_CMD;
-
-    return 0;
+unsigned char getAddressByte(FrameType ft, EndType end) {
+    if(end == TRANSMITTER) return A_RECEIVER_REP;
+    else {
+        switch (ft)
+        {
+        case SET: return A_TRANSMITTER_CMD;
+        case UA: return A_TRANSMITTER_REP;
+        case DISC: return A_TRANSMITTER_CMD;
+        default:
+           perror("error: wrong type");
+           return 0;
+        }
+    }
 }
 
-unsigned char getControlByte(StateMachine *sm) {
-    switch (sm->frameType)
+unsigned char getControlByte(FrameType ft) {
+    switch (ft)
     {
     case SET: return C_SET;
     case DISC: return C_DISC;
@@ -34,9 +41,11 @@ StateMachine *createStateMachine(FrameType frameType, EndType end) {
     changeState(sm, START);
     sm->end = end;
     sm->frameType = frameType;
-    sm->addressByte = getAddressByte(sm);
-    sm->controlByte = getControlByte(sm);
+    sm->addressByte = getAddressByte(frameType, end);
+    sm->controlByte = getControlByte(frameType);
     sm->bcc = sm->addressByte ^ sm->controlByte;
+
+    // printf("%x - %x - %x - %x\n", sm->frameType, sm->addressByte, sm->controlByte,sm->bcc);
 
     return sm;
 }
@@ -45,13 +54,15 @@ void deleteStateMachine(StateMachine *sm) {
     if(sm != NULL) 
         free(sm);
 }
-void handleStateMachine(StateMachine *sm, unsigned char byte) {
-    
+
+void handleStateMachine(StateMachine *sm, unsigned char byte, unsigned char *frame) {
+    // printf("state: %d %x\n", sm->state, byte);
     switch (sm->state)
     {
     case START:
         if(byte == FLAG) {
             changeState(sm, FLAG_RCV);
+            frame[0] = byte;
         }
         break;
 
@@ -61,6 +72,7 @@ void handleStateMachine(StateMachine *sm, unsigned char byte) {
         }
         else if (byte == sm->addressByte) {
             changeState(sm, A_RCV);
+            frame[1] = byte;
         }
         else {
             changeState(sm, START);
@@ -73,6 +85,7 @@ void handleStateMachine(StateMachine *sm, unsigned char byte) {
         }
         else if (byte == sm->controlByte){
             changeState(sm, C_RCV);
+            frame[2] = byte;
         }
         else {
             changeState(sm, START);
@@ -83,8 +96,9 @@ void handleStateMachine(StateMachine *sm, unsigned char byte) {
         if(byte == FLAG) {
             changeState(sm, FLAG_RCV);
         }
-        else if (byte == sm->bcc){
+        else if (byte == (frame[1]^frame[2])){
             changeState(sm, BCC_OK);
+            frame[3] = byte;
         }
         else {
             changeState(sm, START);
@@ -93,6 +107,7 @@ void handleStateMachine(StateMachine *sm, unsigned char byte) {
 
     case BCC_OK:
         if(byte == FLAG) {
+            frame[4] = byte;
             changeState(sm, STOP);
         }
         else {
