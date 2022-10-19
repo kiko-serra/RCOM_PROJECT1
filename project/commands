@@ -1,0 +1,12 @@
+socat:
+    sudo socat -d  -d  PTY,link=/dev/ttyS10,mode=777   PTY,link=/dev/ttyS11,mode=777
+
+transmiter:
+    gcc ../main.c transmitter.c receiver.c link_layer.c frame.c file.c state_machine.c
+
+    ./a.out /dev/ttyS11 tx
+
+receiver:
+    gcc ../main.c transmitter.c receiver.c link_layer.c frame.c file.c state_machine.c
+
+    ./a.out /dev/ttyS11 rx

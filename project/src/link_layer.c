@@ -1,76 +1,82 @@
 // Link layer protocol implementation
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "link_layer.h"
+#include "constants.h"
 
-// MISC
-#define _POSIX_SOURCE 1 // POSIX compliant source
+struct termios oldtio, newtio;
 
 ////////////////////////////////////////////////
 // LLOPEN
 ////////////////////////////////////////////////
-int llopen(LinkLayer connectionParameters)
-{
-    int fd = open(connectionParameters.port, O_RDWR | O_NOCTTY);
-    return 1;
+int llopen(char* port){
+    int fd = open(port, O_RDWR | O_NOCTTY);
+
+    if (fd < 0)
+    {
+        perror(port);
+        exit(-1);
+    }
+
+    struct termios oldtio;
+    struct termios newtio;
+
+    // Save current port settings
+    if (tcgetattr(fd, &oldtio) == -1)
+    {
+        perror("tcgetattr");
+        exit(-1);
+    }
+
+    // Clear struct for new port settings
+    memset(&newtio, 0, sizeof(newtio));
+
+    newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
+    newtio.c_iflag = IGNPAR;
+    newtio.c_oflag = 0;
+
+    // Set input mode (non-canonical, no echo,...)
+    newtio.c_lflag = 0;
+    newtio.c_cc[VTIME] = 0; // Inter-character timer unused
+    newtio.c_cc[VMIN] = 1;  // Blocking read until 1 char received
+
+    // VTIME e VMIN should be changed in order to protect with a
+    // timeout the reception of the following character(s)
+
+    // Now clean the line and activate the settings for the port
+    // tcflush() discards data written to the object referred to
+    // by fd but not transmitted, or data received but not read,
+    // depending on the value of queue_selector:
+    //   TCIFLUSH - flushes data received but not read.
+    tcflush(fd, TCIOFLUSH);
+
+    // Set new port settings
+    if (tcsetattr(fd, TCSANOW, &newtio) == -1)
+    {
+        perror("tcsetattr");
+        exit(-1);
+    }
+    return fd;
 }
 
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
-int llwrite(const unsigned char *buf, int bufSize)
-{
-    printf("New termios structure set\n");
+int llwrite(int fd, unsigned char *buf, int bufSize){
+    // TODO
 
-    // Create buffers to send and to receive frame
-    unsigned char bufSend[BUF_SIZE] = {0};
-    unsigned char bufReceive[BUF_SIZE] = {0};
-
-    // State Machine to parse bytes
-    StateMachine *sm = createStateMachine(UA, RECEIVER);
-    if(sm == NULL){
-        perror("create state machine");
-        exit(-1);
-    }
-
-    (void)signal(SIGALRM, alarmHandler);
-
-    // Read input and store
-    gets(bufSend);
-    int len = strlen(bufSend);
-    (void)signal(SIGALRM, alarmHandler);
-    int bytes;
-
-    while (STOP == FALSE && alarmCount < 4){
-
-        // Send frame
-        bytes = write(fd, bufSend, len);
-        printf("%d bytes written\n", bytes);
-
-        alarm(3); // Set alarm to be triggered in 3s
-
-        // Receive frame
-        int bytesRead = read(fd, bufReceive, BUF_SIZE);
-        bufReceive[bytesRead] = '\0'; // Set end of string to '\0', so we can printf
-
-        // Check if the received string is equal
-        if(strcmp(bufSend, bufReceive)==0){
-            printf("Correctly received\n");
-            STOP = TRUE;
-        };
-    }
-
-    // Check if alarm was fired and exit with error code
-    if(alarmCount >= 4)
-        return -1;
-
-    return bytes;
+   return 0;
 }
 
 ////////////////////////////////////////////////
 // LLREAD
 ////////////////////////////////////////////////
-int llread(unsigned char *packet)
-{
+int llread(int fd, unsigned char *packet){
     // TODO
 
     return 0;
@@ -79,9 +85,14 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 // LLCLOSE
 ////////////////////////////////////////////////
-int llclose(int showStatistics)
-{
-    // TODO
+int llclose(int fd){
+    if (tcsetattr(fd,TCSANOW,&oldtio) == -1)
+	{
+		perror("tcsetattr");
+		exit(-1);
+	}
+
+ 	close(fd);
 
     return 1;
 }

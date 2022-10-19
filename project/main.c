@@ -3,44 +3,49 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "application_layer.h"
+#include "src/transmitter.h"
+#include "src/receiver.h"
+#include "src/state_machine.h"
+#include "src/frame.h"
 
-#define BAUDRATE 9600
-#define N_TRIES 3
-#define TIMEOUT 4
 
-// Arguments:
-//   $1: /dev/ttySxx
-//   $2: tx | rx
-//   $3: filename
+
 int main(int argc, char *argv[])
 {
-    if (argc < 4)
+    if (argc < 3)
     {
-        printf("Usage: %s /dev/ttySxx tx|rx filename\n", argv[0]);
+        printf("Incorrect program usage\n"
+			   "First argument must be: \t\"/det/ttyS0\"\n"
+		       "Second argument must be:\t\"transmitter\" or \"receiver\"\n");
+		exit(1);
+    }
+
+    if((strcmp("/dev/ttyS10", argv[1])!=0) && (strcmp("/dev/ttyS11", argv[1])!=0)){
+        printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS0 or /dev/ttyS1\n");
         exit(1);
     }
 
-    const char *serialPort = argv[1];
-    const char *role = argv[2];
-    const char *filename = argv[3];
+    
 
-    printf("Starting link-layer protocol application\n"
-           "  - Serial port: %s\n"
-           "  - Role: %s\n"
-           "  - Baudrate: %d\n"
-           "  - Number of tries: %d\n"
-           "  - Timeout: %d\n"
-           "  - Filename: %s\n",
-           serialPort,
-           role,
-           BAUDRATE,
-           N_TRIES,
-           TIMEOUT,
-           filename);
-
-    applicationLayer(serialPort, role, BAUDRATE, N_TRIES, TIMEOUT, filename);
+    if (strcmp(argv[2], "tx") == 0)
+	{   
+        /*
+            ask file name (to choose a file)
+            and add a parameter to write_noncanonical to do operations with the file
+        */
+		write_noncanonical(argv[1]);
+	}
+	else if (strcmp(argv[2], "rx") == 0)
+	{
+		read_noncanonical(argv[1]);
+	}
+	else
+	{
+		printf("Must specify \"tx\" or \"rx\" as second argument\n");
+		return -1;
+	}
 
     return 0;
 }
