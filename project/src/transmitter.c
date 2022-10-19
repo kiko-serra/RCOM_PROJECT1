@@ -13,7 +13,6 @@
 #include "frame.h"
 #include "constants.h"
 
-
 void alarmHandler(int signal){
     printf("Alarm #%d\n", ll.nRetransmissions);
     ll.nRetransmissions --;
@@ -50,6 +49,13 @@ int write_noncanonical(char* port){
             case 1: // send frame I
                 break;
             case 2: // send frame DISC to disconect
+                send_disc_frame(al.fileDescriptor);
+                alarm(ll.timeout);
+                printf("transmitter before state machine disc\n");
+                state_machine_DISC(al.fileDescriptor, TRANSMITTER);
+
+                printf("Received the DISC correctly\n");
+                send_ua_frame(al.fileDescriptor);  // se sair do ciclo da state_machine, quer dizer que recebeu o UA corretamente
                 if(llclose(al.fileDescriptor) > 0){
                     exit(1);
                 }

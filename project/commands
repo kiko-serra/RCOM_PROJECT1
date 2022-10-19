@@ -4,7 +4,7 @@ socat:
 transmiter:
     gcc ../main.c transmitter.c receiver.c link_layer.c frame.c file.c state_machine.c
 
-    ./a.out /dev/ttyS11 tx
+    ./a.out /dev/ttyS10 tx
 
 receiver:
     gcc ../main.c transmitter.c receiver.c link_layer.c frame.c file.c state_machine.c

@@ -26,7 +26,6 @@ int read_noncanonical(char* port)
             case 0: // openning (receive frame SET and send UA)
                 
                 state_machine_SET_UA(al.fileDescriptor, RECEIVER);
-                printf("TEste\n");
                 printf("SET acknowledge!\n");
 
                 send_ua_frame(al.fileDescriptor);
@@ -36,7 +35,17 @@ int read_noncanonical(char* port)
                 break;
             case 1: // receiving frame I
                 break;
-            case 2: // receiving frame DISC and then send it
+            case 2: // receiving frame DISC and then send it, then reads UA
+                state_machine_DISC(al.fileDescriptor, RECEIVER);
+                printf("DISC acknowledge!\n");
+
+                send_disc_frame(al.fileDescriptor);
+                alarm(ll.timeout);
+
+                if(read_ua_frame(al.fileDescriptor) == -1)
+                    printf("Error receiving UA\n\n");
+                printf("Received the UA correctly!\nConnection closed sucessfully!\n\n");
+
                 if(llclose(al.fileDescriptor) > 0){
                     exit(1);
                 }

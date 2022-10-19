@@ -44,3 +44,13 @@ void send_disc_frame(int fd){
     int bytes = write(fd, DC, 5);
     printf("DISC sent! bytes sent: %d\n", bytes);
 }
+
+int read_ua_frame(int fd){
+
+    unsigned char UAR[5];
+    read(fd, UAR, 5);
+    if(UAR[0] == FLAG && UAR[1] == A && UAR[4] == FLAG){
+        if((UAR[3] == UAR[1])^UAR[2]) return 1;
+    }
+    return -1;
+}

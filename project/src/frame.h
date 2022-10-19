@@ -7,4 +7,6 @@ void send_ua_frame(int fd);
 
 void send_disc_frame(int fd);
 
+int read_ua_frame(int fd);
+
 #endif // _frame_h_
