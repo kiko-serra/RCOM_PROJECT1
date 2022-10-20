@@ -16,18 +16,38 @@
 #define A_TRANSMITTER_REP 0x01
 #define A_RECEIVER_CMD 0x01
 
+// I Field
+
+#define C_CTRL_1 0x00 
+#define C_CTRL_2 0x40
+
 #define FLAG 0x7e
-#define ESC_OCT 0x7d
+#define COMP_FLAG 0x5e
+
+#define ESC 0x7d
+#define COMP_ESC 0x5e
 
 #define FRAME_SIZE 5
 
-typedef enum { I,SET,DISC,UA,RR,REJ } FrameType;
+typedef enum { I,SET,DISC,UA,RR,REJ, NONE } FrameType;
 
 void build_frame (FrameType type, unsigned char* frame, LinkLayerRole role);
 
-void send_frame(int fd, FrameType type, LinkLayerRole other);
+void build_information_frame(unsigned char* frame, const unsigned char* data, int lenght, int curr_num);
+
+void send_frame(int fd, FrameType type, LinkLayerRole other, int curr_num);
+
+int send_information_frame(int fd, unsigned char* frame, int length);
 
 int receive_frame(int fd, FrameType type, LinkLayerRole other);
+
+int receive_information_frame(int fd, unsigned char* frame);
+
+int receive_information_answer(int fd, int curr_num);
+
+int byte_stuffing(unsigned char* frame, int lenght);
+
+int byte_destuffing(unsigned char* frame, int lenght);
 
 
 #endif // _FRAME_H_

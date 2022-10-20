@@ -26,9 +26,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         perror("error: llopen failed");
     }
 
-    // JUST NEED TO READ
+    // JUST NEED TO READ/WRITE
 
-    if (llclose(0) == -1) {
+    if (llclose(0) < 0) {
         perror("error: failed to terminate connection\n");
     } else {
         printf("Closed connection successfuly\n");
