@@ -2,6 +2,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "alarm.h"
 #include "setstatemachine.h"
@@ -10,14 +12,25 @@
 
 #define PACKET_SIZE 256
 
-void build_packets(FILE *fp, int fileSize) {
-    printf("File size: %d", fileSize);
+
+
+void build_packets(char* fileName) {
+    struct stat st;
+    int fd = open(fileName, O_RDONLY);
+    
+    if(stat(fileName, &st) != 0) {
+        perror("File not found");
+        exit(-1);
+    }
+
+    int fileSize = st.st_size;
+    printf("File size: %d\n", fileSize);
 
     int ammount = (fileSize/PACKET_SIZE) + 1;
     char *file = malloc(fileSize);
     int file_size = 1024, nBytes = file_size, i =0;
     while(nBytes == file_size) {
-        nBytes = read(fp, file + i*file_size, file_size);
+        nBytes = read(fd, file + i*file_size, file_size);
 
         if(nBytes < 0) {
             perror("Error reading file");
@@ -25,9 +38,9 @@ void build_packets(FILE *fp, int fileSize) {
         }
         i++;
     }
-    closeFile(fp);
+    close(fd);
 
-    char* packets = calloc(size + 2, sizeof(char*)); // +2 for control packets
+    unsigned char* packets = calloc(ammount + 2, sizeof(char*)); // +2 for control packets
     int control =0;
     while(i < ammount) {
         int packets_size = 0;
@@ -47,6 +60,7 @@ void build_packets(FILE *fp, int fileSize) {
 
             memcpy(packets[control][packets_size], fileName, strlen(fileName) + 1);
             packets_size += strlen(fileName) + 1;
+            control = 1;
         }
         else if(control == (fileSize/PACKET_SIZE) + 2){ //if its the last control packet
             packets[control][packets_size++] = 3;
@@ -61,6 +75,7 @@ void build_packets(FILE *fp, int fileSize) {
 
             memcpy(packets[control][packets_size], fileName, strlen(fileName) + 1);
             packets_size += strlen(fileName) + 1;
+            control = 0;
         }
         else {
             packets[control][packets_size++] = 1;
@@ -73,7 +88,7 @@ void build_packets(FILE *fp, int fileSize) {
         }
         i++;
 
-        llwrite(packets[control], packets_size);
+        llwrite(&packets[control], packets_size);
     }
     
         

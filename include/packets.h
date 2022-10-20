@@ -3,6 +3,6 @@
 
 #include "files.h"
 
-void build_packets(FILE *fp, int fileSize);
+void build_packets(char* fileName);
 
 #endif
