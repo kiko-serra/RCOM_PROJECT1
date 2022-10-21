@@ -18,14 +18,14 @@ void build_frame (FrameType type, unsigned char* frame, LinkLayerRole role) {
 }
 
 // Frames of type I
-void build_information_frame(unsigned char* frame, const unsigned char* data, int length, int curr_num) {
+void build_information_frame(unsigned char* frame, const unsigned char* data, unsigned char length, int curr_num) {
     frame[0] = FLAG;
     frame[1] = A_TRANSMITTER_CMD;
     frame[2] = curr_num ? C_CTRL_2 : C_CTRL_1;
     frame[3] = frame[1] ^ frame[2];
-    memcpy(frame + 4, data, length * sizeof (unsigned char));
+    memcpy(frame + 4, data, length);
     unsigned char BCC2 = data[0];
-    for(int i = 1; i < length; i++) 
+    for(int i = 1; i < (int)length; i++) 
         BCC2 ^= data[i];
     frame[4 + length] = BCC2;
     frame[5 + length] = FLAG;  

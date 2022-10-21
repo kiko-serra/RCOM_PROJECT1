@@ -33,7 +33,7 @@ typedef enum { I,SET,DISC,UA,RR,REJ, NONE } FrameType;
 
 void build_frame (FrameType type, unsigned char* frame, LinkLayerRole role);
 
-void build_information_frame(unsigned char* frame, const unsigned char* data, int lenght, int curr_num);
+void build_information_frame(unsigned char* frame, const unsigned char* data, unsigned char lenght, int curr_num);
 
 void send_frame(int fd, FrameType type, LinkLayerRole other, int curr_num);
 

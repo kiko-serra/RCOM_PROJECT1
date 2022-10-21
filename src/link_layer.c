@@ -90,7 +90,7 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 // LLWRITE
 ////////////////////////////////////////////////
-int llwrite(unsigned char *buf, int bufSize)
+int llwrite(const unsigned char *buf, int bufSize)
 {
     unsigned char frame[MAX_PAYLOAD_SIZE];
     int stop = FALSE, answer;
