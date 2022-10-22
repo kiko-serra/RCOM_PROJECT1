@@ -19,7 +19,7 @@
 // I Field
 
 #define C_CTRL_1 0x00 
-#define C_CTRL_2 0x40
+#define C_CTRL_2 0x01
 
 #define FLAG 0x7e
 #define COMP_FLAG 0x5e

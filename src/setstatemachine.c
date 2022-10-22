@@ -4,7 +4,7 @@
 #include "frame.h"
 
 unsigned char getAddressByte(FrameType ft, EndType end) {
-    if(end == TRANSMITTER) return A_RECEIVER_REP;
+    if(end == RECEIVER) return A_RECEIVER_REP;
     else {
         switch (ft)
         {

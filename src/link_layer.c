@@ -147,21 +147,21 @@ int llread(unsigned char *packet)
         frameSize = byte_destuffing(frame, bytes);
         bufSize = frameSize -6;
         if((frame[1]^frame[2]) != frame[3]) {
-            printf("BCC1 Failed..\n");
+            printf("BCC1 Failed.. %x -- %x\n", (frame[1]^frame[2]),frame[3]);
         }
 
-        if(frame[2] != curr_num) {
-            printf("Received duplicate\n");
+        if((int)frame[2] != curr_num) {
+            printf("Received duplicate, %d - %d\n", frame[2], curr_num);
             send_frame(fd, RR, LlRx, curr_num);
             continue;
         }
 
-        unsigned char BCC2 = frame[frameSize-2];
-        for(int i = 4; i < frameSize-2; i++) 
+        unsigned char BCC2 = frame[bufSize-2];
+        for(int i = 5; i < bufSize-2; i++) 
             BCC2 ^= frame[i];
         
         if(BCC2 != frame[4]) {
-            printf("BCC1 Failed\n");
+            printf("BCC2 Failed %x -- %x\n", BCC2 ,frame[4]);
             send_frame(fd, REJ, LlRx, curr_num);
             continue;
         }
