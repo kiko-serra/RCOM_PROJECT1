@@ -124,14 +124,14 @@ int byte_stuffing(unsigned char* frame, int length) {
 
     for(int i = 4; i < length+5; i++) {
         if(frame[i] == FLAG) {
-            printf("!found flag!\n");
+            //printf("!found flag!\n");
             aux_frame[data_pos] = ESC;
             data_pos++;
             aux_frame[data_pos] = COMP_FLAG;
             data_pos++;
         }
         else if (frame[i] == ESC) {
-            printf("!found esc!\n");
+            //printf("!found esc!\n");
             aux_frame[data_pos] = ESC;
             data_pos++;
             aux_frame[data_pos] = COMP_ESC;
@@ -143,7 +143,7 @@ int byte_stuffing(unsigned char* frame, int length) {
         }
     }
 
-    // Pass BCC2 & FLAG to auxiliar frame
+    // Pass FLAG to auxiliar frame
     memcpy(aux_frame + data_pos, frame+length+5, 1);
     data_pos++;
     memcpy(frame, aux_frame, data_pos);

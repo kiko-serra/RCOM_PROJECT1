@@ -7,6 +7,7 @@
 #include "link_layer.h"
 #include "packets.h"
 
+#define PACKET_SEND_SIZE 450
 #define FILE_NAME_SIZE 128
 
 int sendFile(const char *fileName) {
@@ -32,7 +33,7 @@ int sendFile(const char *fileName) {
         fclose(fp);
         return -1;
     }
-    printf("sendFile: Control packet start done\n");
+    //printf("sendFile: Control packet start done\n");
 
     ////////////////////////////////////////////////
 
@@ -41,10 +42,10 @@ int sendFile(const char *fileName) {
     unsigned char buffer[MAX_PAYLOAD_SIZE];
     int stop = FALSE;
     while(!stop) {
-        nBytes = fread(buffer, sizeof(unsigned char), 26, fp);
+        nBytes = fread(buffer, sizeof(unsigned char), PACKET_SEND_SIZE, fp);
         printf("sendFile: nBytes %d\n", nBytes);
 
-        if(nBytes < 26)
+        if(nBytes < PACKET_SEND_SIZE)
             stop = TRUE;
 
         packetSize = build_data_packet(packet, nBytes, buffer, currNum++);
@@ -109,7 +110,7 @@ int receiveFile(const char *mainFile) {
             return -1;
         }
         if(packet[0] == C_END) break;
-        printf("receiveFile: \n");
+       // printf("receiveFile: \n");
         if(fwrite(packet + 4, sizeof(unsigned char), packetSize - 4, fp) != packetSize -4) {
             fclose(fp);
             perror("error: failed to write packet on file\n");

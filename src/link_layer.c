@@ -98,11 +98,11 @@ int llwrite(const unsigned char *buf, int bufSize)
     reset_alarm();
     next_number();
     // do byte stuffing
-    for(int i = 0; i < bufSize+6; i++) printf("%x - ", frame[i]);
-    printf("\n BEFORE\n");
+    // for(int i = 0; i < bufSize+6; i++) printf("%x - ", frame[i]);
+    // printf("\n BEFORE\n");
     int frameSize = byte_stuffing(frame, bufSize);
-    for(int i = 0; i < frameSize; i++) printf("%x - ", frame[i]);
-    printf("\n AFTER\n");
+    // for(int i = 0; i < frameSize; i++) printf("%x - ", frame[i]);
+    // printf("\n AFTER\n");
 
     // printf("before stuffing: %d - after stuffing: %d \n", bufSize, frameSize);
 
@@ -178,9 +178,6 @@ int llread(unsigned char *packet)
         for(int i = 5; i < frameSize-2; i++) {
             BCC2 ^= frame[i];
         }
-        for(int i = 0; i < frameSize-2; i++)
-            printf("%x - ", frame[i]);
-        printf("%x\n", frame[frameSize-1]);
         
         if(BCC2 != frame[frameSize-2]) {
             printf("BCC2 Failed %x -- %x\n", BCC2 ,frame[4]);
