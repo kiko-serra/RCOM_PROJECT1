@@ -7,10 +7,22 @@
 #include "link_layer.h"
 #include "packets.h"
 
-#define PACKET_SEND_SIZE 450
+// 5 bytes will never be stuffed, the rest could be twice as big
+// In frames: 2 Flags, 1 A byte, 1 C byte 
+// In packets: 1 C byte
+// 496*2 + 5 = 997, which is still under the maximum payload limit 
+#define MAX_READ_FILE 496
+
+
 #define FILE_NAME_SIZE 128
 
+// Opens the file passed by the parameter
+// Builds and sends a control packet to the receiver signing it as it is starting to send packets
+// Reads data from the file, builds into data packets and sends them to the receiver
+// Builds and sends a control packet to the receiver signing there won't be more packets coming
+// Returns -1 in case of an error. Returns 1 otherwise
 int sendFile(const char *fileName) {
+
     FILE *fp = fopen(fileName, "r");
     if(fp == NULL) {
         perror("error: couldn't open the file\n");
@@ -23,7 +35,7 @@ int sendFile(const char *fileName) {
 
     printf("File size  %i\n", fileSize);
 
-    unsigned char packet[1000];
+    unsigned char packet[MAX_PAYLOAD_SIZE];
     int packetSize;
     // start control 
 
@@ -42,10 +54,10 @@ int sendFile(const char *fileName) {
     unsigned char buffer[MAX_PAYLOAD_SIZE];
     int stop = FALSE;
     while(!stop) {
-        nBytes = fread(buffer, sizeof(unsigned char), PACKET_SEND_SIZE, fp);
+        nBytes = fread(buffer, sizeof(unsigned char), MAX_READ_FILE, fp);
         printf("sendFile: nBytes %d\n", nBytes);
 
-        if(nBytes < PACKET_SEND_SIZE)
+        if(nBytes < MAX_READ_FILE)
             stop = TRUE;
 
         packetSize = build_data_packet(packet, nBytes, buffer, currNum++);
@@ -74,7 +86,12 @@ int sendFile(const char *fileName) {
     return 1;
 }
 
-int receiveFile(const char *mainFile) {
+
+// Opens the file passed by the start control packet
+// Reads data packets coming in from llread and writes into the file
+// Receives the end control packet and compares the expected file names
+// Returns -1 in case of an error. Returns 1 otherwise
+int receiveFile(const char *expectedFileName) {
 
     unsigned char packet[1000];
     int packetSize;
@@ -130,8 +147,8 @@ int receiveFile(const char *mainFile) {
         fclose(fp);
         return -1;
     }
-    if(strcmp(auxFileName, fileName) != 0) {
-        printf("error: file names differ : %s - %s\n", fileName, auxFileName);
+    if(strcmp(auxFileName, fileName) != 0 && strcmp(expectedFileName, fileName) != 0) {
+        printf("error: file names differ : %s - %s - %s\n", fileName, auxFileName, expectedFileName);
         fclose(fp);
         return -1;
     }
@@ -167,12 +184,18 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("sending...\n");
         if(sendFile(filename) < 0) {
             perror("error: failed to send file\n");
+            llclose(-1);
+            perror("error: probably connection lost...\n");
+            return;
         }
     }
     else  {
         printf("receiving...\n");
         if(receiveFile(filename) < 0) {
             perror("error: failed to receive file\n");
+            llclose(-1);
+            perror("error: probably connection lost...\n");
+            return;
         }
     }
         

@@ -10,7 +10,7 @@
 #include "link_layer.h"
 #include "alarm.h"
 #include "sndtermios.h"
-#include "setstatemachine.h"
+#include "statemachine.h"
 
 
 // MISC
@@ -73,7 +73,7 @@ int llopen(LinkLayer connectionParameters)
     // Setup connection parameters
     conParam = connectionParameters;
 
-    fd = setupTermios(conParam.serialPort, conParam.baudRate, conParam.role == LlTx ? 0 : 1);
+    fd = setupTermios(conParam.serialPort, conParam.baudRate, conParam.role);
 
     if(fd < 0)
         perror("error: failed to setup new termios");
@@ -131,7 +131,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     if(alarmCount >= conParam.nRetransmissions || answer < 0)
         return -1;
 
-    return 0;
+    return frameSize;
 }
 
 ////////////////////////////////////////////////
@@ -198,6 +198,8 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 // LLCLOSE
 ////////////////////////////////////////////////
+
+// Close transmitter
 int closeTx() {
     int confirmation;
     while(alarmCount < conParam.nRetransmissions) {
@@ -244,6 +246,13 @@ int closeRx() {
 
 int llclose(int showStatistics)
 {
+    // In case the connection was abruptly lost
+    if(showStatistics == -1) {
+        restoreTermios(fd);
+        return -1;
+    }
+
+
     int ret = 1;
     if(conParam.role == LlTx) {
         if(closeTx() < 0) ret = -1;

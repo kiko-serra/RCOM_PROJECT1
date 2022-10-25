@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 
 #include "alarm.h"
-#include "setstatemachine.h"
+#include "statemachine.h"
 #include "packets.h"
 
 

@@ -3,18 +3,18 @@
 #include <unistd.h>
 
 #include "alarm.h"
-#include "setstatemachine.h"
+#include "statemachine.h"
 #include "frame.h"
 
 extern int alarmFired;
 
 // Frames of type SET & UA
-void build_frame (FrameType type, unsigned char* frame, LinkLayerRole role) {
-    unsigned char A = getAddressByte (type, role);
-    unsigned char C = getControlByte(type);
-    unsigned char BCC = A ^ C;
-    unsigned char disc[FRAME_SIZE] = {FLAG, A, C, BCC, FLAG};
-    memcpy(frame, disc, FRAME_SIZE);
+void build_frame (unsigned char* frame, FrameType type, LinkLayerRole role) {
+    frame[0] = FLAG;
+    frame[1] = getAddressByte (type, role);
+    frame[2] = getControlByte(type);
+    frame[3] = frame[1] ^ frame[2];
+    frame[4] = FLAG;
 }
 
 // Frames of type I
@@ -31,10 +31,9 @@ void build_information_frame(unsigned char* frame, const unsigned char* data, in
     frame[5 + length] = FLAG;  
 }
 
-
 void send_frame(int fd, FrameType type, LinkLayerRole role, int curr_num) {
     unsigned char frame[FRAME_SIZE];
-    build_frame(type, frame, role);
+    build_frame(frame, type, role);
     int bytes = write(fd, frame, FRAME_SIZE);
     if(bytes == -1) {
         perror("error: failed to write");
@@ -42,14 +41,14 @@ void send_frame(int fd, FrameType type, LinkLayerRole role, int curr_num) {
 }
 
 int send_information_frame(int fd, unsigned char* frame, int length) {
-    int bytesWritten = 0;
-    while(bytesWritten != length) {
-        int bytes = write(fd, frame+bytesWritten, length - bytesWritten);
+    int bytes_written = 0;
+    while(bytes_written != length) {
+        int bytes = write(fd, frame+bytes_written, length - bytes_written);
         if(bytes <0) {
             perror("error: failed to send frame\n");
             return -1;
         }
-        bytesWritten += bytes;
+        bytes_written += bytes;
     }
     printf("bytes written: %d\n",length);
     return 0;
@@ -77,6 +76,7 @@ int receive_frame(int fd, FrameType type, LinkLayerRole role) {
 }
 
 int receive_information_frame(int fd, unsigned char* frame) {
+    // Default to 1 to not fail!!!!!
     return read(fd, frame, 1);
 }
 
@@ -125,22 +125,17 @@ int byte_stuffing(unsigned char* frame, int length) {
     for(int i = 4; i < length+5; i++) {
         if(frame[i] == FLAG) {
             //printf("!found flag!\n");
-            aux_frame[data_pos] = ESC;
-            data_pos++;
-            aux_frame[data_pos] = COMP_FLAG;
-            data_pos++;
+            aux_frame[data_pos++] = ESC;
+            aux_frame[data_pos++] = COMP_FLAG;
         }
         else if (frame[i] == ESC) {
             //printf("!found esc!\n");
-            aux_frame[data_pos] = ESC;
-            data_pos++;
-            aux_frame[data_pos] = COMP_ESC;
-            data_pos++;
+            aux_frame[data_pos++] = ESC;
+            aux_frame[data_pos++] = COMP_ESC;           
         }
-        else {
-            aux_frame[data_pos] = frame[i];
-            data_pos++;
-        }
+        else
+            aux_frame[data_pos++] = frame[i];
+        
     }
 
     // Pass FLAG to auxiliar frame
@@ -169,8 +164,7 @@ int byte_destuffing(unsigned char* frame, int length) {
             aux_frame[data_pos++] = frame[i];
         }
     }
-    //aux_frame[data_pos++] = frame[length+3];
-    // Pass BCC2 & FLAG to auxiliar frame
+    // Pass FLAG to auxiliar frame
     memcpy(aux_frame + data_pos, frame+length+5, 1);
     data_pos++;
     memcpy(frame, aux_frame, data_pos);

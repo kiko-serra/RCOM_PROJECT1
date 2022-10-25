@@ -3,8 +3,6 @@
 
 #include "link_layer.h"
 
-// Control Field
-
 #define C_SET 0x03
 #define C_DISC 0x0B
 #define C_UA 0x07
@@ -15,8 +13,6 @@
 #define A_RECEIVER_REP 0x03
 #define A_TRANSMITTER_REP 0x01
 #define A_RECEIVER_CMD 0x01
-
-// I Field
 
 #define C_CTRL_1 0x00 
 #define C_CTRL_2 0x01
@@ -29,9 +25,9 @@
 
 #define FRAME_SIZE 5
 
-typedef enum { I,SET,DISC,UA,RR,REJ, NONE } FrameType;
+typedef enum { I, SET, DISC, UA, RR,REJ, NONE } FrameType;
 
-void build_frame (FrameType type, unsigned char* frame, LinkLayerRole role);
+void build_frame (unsigned char* frame, FrameType type, LinkLayerRole role);
 
 void build_information_frame(unsigned char* frame, const unsigned char* data, int lenght, int curr_num);
 
