@@ -98,7 +98,13 @@ int llwrite(const unsigned char *buf, int bufSize)
     reset_alarm();
     next_number();
     // do byte stuffing
+    for(int i = 0; i < bufSize+6; i++) printf("%x - ", frame[i]);
+    printf("\n BEFORE\n");
     int frameSize = byte_stuffing(frame, bufSize);
+    for(int i = 0; i < frameSize; i++) printf("%x - ", frame[i]);
+    printf("\n AFTER\n");
+
+    // printf("before stuffing: %d - after stuffing: %d \n", bufSize, frameSize);
 
     while(alarmCount < conParam.nRetransmissions && !stop) {
         send_information_frame(fd, frame, frameSize);
@@ -133,19 +139,31 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    int frameSize, validFrame = FALSE, bytes, bufSize;
+    int frameSize, validFrame = FALSE, bufSize;
     unsigned char frame[MAX_PAYLOAD_SIZE];
-
+    int i = 0;
     while (!validFrame)
     {
-        bytes = receive_information_frame(fd, frame);
-        if(bytes < 0) {
-            perror("error: receive information frame failed");
-            return -1;
+        int flags = 0;
+        int bytes = 0;
+        while(flags < 2) {
+            int auxBytes = receive_information_frame(fd, frame+i);
+            if(auxBytes != 1) {
+                printf("received nothing\n");
+                //perror("error: receive information frame failed");
+                return -1;
+            }
+            // else printf("%x - ", frame[i]);
+            if(frame[i] == FLAG){
+               flags++;
+               //printf("flag found\n");
+            }
+            bytes++;
+            i++;
         }
 
-        frameSize = byte_destuffing(frame, bytes);
-        bufSize = frameSize -6;
+        frameSize = byte_destuffing(frame, bytes-6);
+        bufSize = frameSize - 6;
         if((frame[1]^frame[2]) != frame[3]) {
             printf("BCC1 Failed.. %x -- %x\n", (frame[1]^frame[2]),frame[3]);
         }
@@ -156,11 +174,15 @@ int llread(unsigned char *packet)
             continue;
         }
 
-        unsigned char BCC2 = frame[bufSize-2];
-        for(int i = 5; i < bufSize-2; i++) 
+        unsigned char BCC2 = frame[4];
+        for(int i = 5; i < frameSize-2; i++) {
             BCC2 ^= frame[i];
+        }
+        for(int i = 0; i < frameSize-2; i++)
+            printf("%x - ", frame[i]);
+        printf("%x\n", frame[frameSize-1]);
         
-        if(BCC2 != frame[4]) {
+        if(BCC2 != frame[frameSize-2]) {
             printf("BCC2 Failed %x -- %x\n", BCC2 ,frame[4]);
             send_frame(fd, REJ, LlRx, curr_num);
             continue;

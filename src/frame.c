@@ -18,14 +18,14 @@ void build_frame (FrameType type, unsigned char* frame, LinkLayerRole role) {
 }
 
 // Frames of type I
-void build_information_frame(unsigned char* frame, const unsigned char* data, unsigned char length, int curr_num) {
+void build_information_frame(unsigned char* frame, const unsigned char* data, int length, int curr_num) {
     frame[0] = FLAG;
     frame[1] = A_TRANSMITTER_CMD;
     frame[2] = curr_num ? C_CTRL_2 : C_CTRL_1;
     frame[3] = frame[1] ^ frame[2];
-    memcpy(frame + 4, data, length);
-    unsigned char BCC2 = data[0];
-    for(int i = 1; i < (int)length; i++) 
+    memcpy(frame + 4, data, length * sizeof(unsigned char));
+    unsigned char BCC2 = 0;
+    for(int i = 0; i < length; i++) 
         BCC2 ^= data[i];
     frame[4 + length] = BCC2;
     frame[5 + length] = FLAG;  
@@ -51,7 +51,7 @@ int send_information_frame(int fd, unsigned char* frame, int length) {
         }
         bytesWritten += bytes;
     }
-
+    printf("bytes written: %d\n",length);
     return 0;
 }
 
@@ -77,7 +77,7 @@ int receive_frame(int fd, FrameType type, LinkLayerRole role) {
 }
 
 int receive_information_frame(int fd, unsigned char* frame) {
-    return read(fd, frame, MAX_PAYLOAD_SIZE);
+    return read(fd, frame, 1);
 }
 
 int receive_information_answer(int fd, int curr_num) {
@@ -122,23 +122,30 @@ int byte_stuffing(unsigned char* frame, int length) {
 
     int data_pos = 4;
 
-    for(int i = 4; i < length+4; i++) {
+    for(int i = 4; i < length+5; i++) {
         if(frame[i] == FLAG) {
-            aux_frame[data_pos++] = ESC;
-            aux_frame[data_pos++] = COMP_FLAG;
+            printf("!found flag!\n");
+            aux_frame[data_pos] = ESC;
+            data_pos++;
+            aux_frame[data_pos] = COMP_FLAG;
+            data_pos++;
         }
         else if (frame[i] == ESC) {
-            aux_frame[data_pos++] = frame[i];
-            aux_frame[data_pos++] = COMP_ESC;
+            printf("!found esc!\n");
+            aux_frame[data_pos] = ESC;
+            data_pos++;
+            aux_frame[data_pos] = COMP_ESC;
+            data_pos++;
         }
         else {
-            aux_frame[data_pos++] = frame[i];
+            aux_frame[data_pos] = frame[i];
+            data_pos++;
         }
     }
 
     // Pass BCC2 & FLAG to auxiliar frame
-    memcpy(aux_frame + data_pos, frame+length+4, 2);
-    data_pos+=2;
+    memcpy(aux_frame + data_pos, frame+length+5, 1);
+    data_pos++;
     memcpy(frame, aux_frame, data_pos);
     return data_pos;
 }
@@ -149,22 +156,23 @@ int byte_destuffing(unsigned char* frame, int length) {
 
     int data_pos = 4;
 
-    for(int i = 4; i < length+4; i++) {
+    for(int i = 4; i < length+5; i++) {
         if(frame[i] == ESC) {
             if(frame[i+1] == COMP_FLAG) {
                 aux_frame[data_pos++] = FLAG;  
             }
             else
                 aux_frame[data_pos++] = ESC;
+            i++;
         }
         else {
             aux_frame[data_pos++] = frame[i];
         }
     }
-
+    //aux_frame[data_pos++] = frame[length+3];
     // Pass BCC2 & FLAG to auxiliar frame
-    memcpy(aux_frame + data_pos, frame+length+4, 2);
-    data_pos+=2;
+    memcpy(aux_frame + data_pos, frame+length+5, 1);
+    data_pos++;
     memcpy(frame, aux_frame, data_pos);
     return data_pos;
 }

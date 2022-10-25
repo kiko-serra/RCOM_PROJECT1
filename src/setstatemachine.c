@@ -26,6 +26,7 @@ unsigned char getControlByte(FrameType ft) {
     case UA: return C_UA;
     case RR: return C_RR;
     case REJ: return C_REJ;
+    case I: case NONE: return 0;
     }
     return 0;
 }
@@ -44,8 +45,6 @@ StateMachine *createStateMachine(FrameType frameType, EndType end) {
     sm->addressByte = getAddressByte(frameType, end);
     sm->controlByte = getControlByte(frameType);
     sm->bcc = sm->addressByte ^ sm->controlByte;
-
-    // printf("%x - %x - %x - %x\n", sm->frameType, sm->addressByte, sm->controlByte,sm->bcc);
 
     return sm;
 }
