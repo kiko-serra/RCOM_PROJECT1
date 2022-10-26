@@ -206,6 +206,12 @@ int llread(unsigned char *packet)
 
         while(flags < 2 && i < MAX_PAYLOAD_SIZE) {
             int auxBytes = receive_information_frame(fd, frame+i);
+
+            // ESTES 2 MEGA IMPORTANTES
+            if(frame[i] != FLAG && i == 0) continue;
+            if(frame[i] == FLAG && i == 1 && flags == 1) continue;
+            ////////////
+
             if(auxBytes != 1) {
                 printf("received nothing\n");
                 //perror("error: receive information frame failed");
@@ -217,6 +223,11 @@ int llread(unsigned char *packet)
             }
             bytes++;
             i++;
+        }
+
+        if(i >= MAX_PAYLOAD_SIZE) {
+            send_frame(fd, REJ, LlRx, curr_num);
+            continue;
         }
 
         r_amnt_is++;
@@ -234,7 +245,7 @@ int llread(unsigned char *packet)
         }
         
         if(BCC2 != frame[frameSize-2]) {
-            printf("BCC2 Failed %x -- %x\n", BCC2 ,frame[4]);
+            printf("BCC2 Failed %x -- %x\n", BCC2 ,frame[frameSize-2]);
             if((int)frame[2] != curr_num) {
                 send_frame(fd, RR, LlRx, curr_num);
                 amnt_rrs++;

@@ -169,8 +169,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     ll.timeout = timeout;
     ll.nRetransmissions = nTries;
 
-    if(!llopen(ll)) {
+    if(llopen(ll) < 0) {
         perror("error: llopen failed");
+        llclose(-1);
+        perror("error: probably connection lost...\n");
+        return;
     }
     printf("opened with success\n");
 
