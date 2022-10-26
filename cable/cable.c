@@ -60,17 +60,19 @@ int openSerialPort(const char *serialPort, struct termios *oldtio, struct termio
 void addNoiseToBuffer(unsigned char *buf, size_t errorIndex)
 {
     buf[errorIndex] ^= 0xFF;
+    //buf[errorIndex] ^= 0x01;
+
 }
 
 int main(int argc, char *argv[])
 {
     printf("\n");
 
-    system("socat -dd PTY,link=/dev/ttyS10,mode=777 PTY,link=/dev/emulatorTx,mode=777 &");
+    system("sudo socat -dd PTY,link=/dev/ttyS10,mode=777 PTY,link=/dev/emulatorTx,mode=777 &");
     sleep(1);
     printf("\n");
 
-    system("socat -dd PTY,link=/dev/ttyS11,mode=777 PTY,link=/dev/emulatorRx,mode=777 &");
+    system("sudo socat -dd PTY,link=/dev/ttyS11,mode=777 PTY,link=/dev/emulatorRx,mode=777 &");
     sleep(1);
 
     printf("\n\n"

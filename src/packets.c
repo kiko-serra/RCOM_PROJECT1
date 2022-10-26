@@ -33,15 +33,15 @@ int verify_control_packet(unsigned char *packet, unsigned char isStart, char *fi
         else if(!isStart && packet[0] == C_END)
             ;
         else {
-            printf("1st failed: %x - %x - %x - %x - %x - %x\n", packet[0], packet[1], packet[2],  packet[3], packet[4], packet[5]);
+            //printf("1st failed: %x - %x - %x - %x - %x - %x\n", packet[0], packet[1], packet[2],  packet[3], packet[4], packet[5]);
             return -1;
         }
         memcpy(fileName, packet + 7, packet[6]);
-        printf("success: %x - %x - %x - %x - %x - %x\n", packet[0], packet[1], packet[2],  packet[3], packet[4], packet[5]);
+        //printf("success: %x - %x - %x - %x - %x - %x\n", packet[0], packet[1], packet[2],  packet[3], packet[4], packet[5]);
         return ((int)packet[3] * 256 + (int)packet[4]);
     }
     else {
-        printf("failed: %x - %x - %x - %x - %x - %x\n", packet[0], packet[1], packet[2],  packet[3], packet[4], packet[5]);
+        //printf("failed: %x - %x - %x - %x - %x - %x\n", packet[0], packet[1], packet[2],  packet[3], packet[4], packet[5]);
         return -1;
     }
 }

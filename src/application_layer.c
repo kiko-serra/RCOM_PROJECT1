@@ -38,16 +38,13 @@ int sendFile(const char *fileName) {
     unsigned char packet[MAX_PAYLOAD_SIZE];
     int packetSize;
     // start control 
-
     packetSize = build_control_packet(packet, TRUE, fileSize, fileName);
     if(llwrite(packet, packetSize) < 0) {
         perror("error: Failed to write packet\n");
         fclose(fp);
         return -1;
     }
-    //printf("sendFile: Control packet start done\n");
-
-    ////////////////////////////////////////////////
+    printf("sendFile: Start control packet done\n");
 
     int currNum = 0;
     int nBytes = 1;
@@ -55,7 +52,7 @@ int sendFile(const char *fileName) {
     int stop = FALSE;
     while(!stop) {
         nBytes = fread(buffer, sizeof(unsigned char), MAX_READ_FILE, fp);
-        printf("sendFile: nBytes %d\n", nBytes);
+        //printf("sendFile: nBytes %d\n", nBytes);
 
         if(nBytes < MAX_READ_FILE)
             stop = TRUE;
@@ -68,11 +65,9 @@ int sendFile(const char *fileName) {
             fclose(fp);
             return -1;
         }
-        //printf("sendFile: endwhile");
     }
 
-    ////////////////////////////////////////////////
-
+    printf("sendFile: Sending end control packet..\n");
     // end control
     build_control_packet(packet, FALSE, fileSize, fileName);
     if(llwrite(packet, packetSize) < 0) {
@@ -81,7 +76,7 @@ int sendFile(const char *fileName) {
         return -1;
     }
 
-    printf("sendFile: Control packet end done\n");
+    printf("sendFile: End control packet done\n");
     fclose(fp);
     return 1;
 }
@@ -121,6 +116,7 @@ int receiveFile(const char *expectedFileName) {
 
     while(1) {
         packetSize = llread(packet);
+        
         if(packetSize < 0) {
             fclose(fp);
             perror("error: failed to read packet\n");
@@ -133,7 +129,7 @@ int receiveFile(const char *expectedFileName) {
             perror("error: failed to write packet on file\n");
             return -1;
         }
-
+        //sleep(4);
     }
 
     printf("receiveFile: written successfuly\n");

@@ -7,6 +7,7 @@
 #include "frame.h"
 
 extern int alarmFired;
+extern int amnt_bytes;
 
 // Frames of type SET & UA
 void build_frame (unsigned char* frame, FrameType type, LinkLayerRole role) {
@@ -50,7 +51,8 @@ int send_information_frame(int fd, unsigned char* frame, int length) {
         }
         bytes_written += bytes;
     }
-    printf("bytes written: %d\n",length);
+    //amnt_bytes+=length;
+    //printf("bytes written: %d\n",length);
     return 0;
 }
 
@@ -77,7 +79,9 @@ int receive_frame(int fd, FrameType type, LinkLayerRole role) {
 
 int receive_information_frame(int fd, unsigned char* frame) {
     // Default to 1 to not fail!!!!!
-    return read(fd, frame, 1);
+    int ret = read(fd, frame, 1);
+    //amnt_bytes += ret > 0 ? 1 : 0;
+    return ret;
 }
 
 int receive_information_answer(int fd, int curr_num) {
@@ -142,6 +146,7 @@ int byte_stuffing(unsigned char* frame, int length) {
     memcpy(aux_frame + data_pos, frame+length+5, 1);
     data_pos++;
     memcpy(frame, aux_frame, data_pos);
+    //amnt_bytes+= data_pos;
     return data_pos;
 }
 
@@ -168,6 +173,7 @@ int byte_destuffing(unsigned char* frame, int length) {
     memcpy(aux_frame + data_pos, frame+length+5, 1);
     data_pos++;
     memcpy(frame, aux_frame, data_pos);
+    //amnt_bytes+= data_pos;
     return data_pos;
 }
 
