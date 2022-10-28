@@ -9,13 +9,7 @@
 #include <termios.h>
 
 // #include "termios.h"
-
-
-#define FALSE 0
-#define TRUE 1
-#define DEFAULT_VTIME 0
-#define DEFAULT_TX_VMIN 0
-#define DEFAULT_RX_VMIN 1
+#include "constants.h"
 
 struct termios oldtio;
 

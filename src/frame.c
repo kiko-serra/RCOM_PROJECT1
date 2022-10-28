@@ -5,6 +5,7 @@
 #include "alarm.h"
 #include "statemachine.h"
 #include "frame.h"
+#include "constants.h"
 
 extern int alarmFired;
 extern int amnt_bytes;
