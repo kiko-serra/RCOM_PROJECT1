@@ -10,7 +10,6 @@
 extern int alarmFired;
 extern int amnt_bytes;
 
-// Frames of type SET & UA
 void build_frame (unsigned char* frame, FrameType type, LinkLayerRole role) {
     frame[0] = FLAG;
     frame[1] = getAddressByte (type, role);
@@ -44,11 +43,11 @@ void send_frame(int fd, FrameType type, LinkLayerRole role, int curr_num) {
 
 int send_information_frame(int fd, unsigned char* frame, int length) {
     int bytes_written = 0;
-    while(bytes_written != length) {
+    while(bytes_written < length) {
         int bytes = write(fd, frame+bytes_written, length - bytes_written);
         if(bytes <0) {
             perror("error: failed to send frame\n");
-            return -1;
+            return ERROR_CMD;
         }
         bytes_written += bytes;
     }
@@ -70,7 +69,7 @@ int receive_frame(int fd, FrameType type, LinkLayerRole role) {
         }
         if(alarmFired) {
             deleteStateMachine(sm);
-            return -1;
+            return ERROR_CMD;
         }
     }
     
@@ -87,7 +86,7 @@ int receive_information_frame(int fd, unsigned char* frame) {
 
 int receive_information_answer(int fd, int curr_num) {
     unsigned char rr[FRAME_SIZE], rej[FRAME_SIZE], byte;
-    int ret = -1;
+    int ret = ERROR_CMD;
     StateMachine *rrSm = createStateMachine(RR, LlRx);
     if(rrSm == NULL){
         perror("error: failed to create State Machine");

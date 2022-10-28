@@ -41,6 +41,7 @@ static int r_amnt_is = 0;
 
 int amnt_bytes = 0;
 
+// Time only starts after sucessfuly coming out of llopen
 struct timeval start_t, end_t;
 double total_t;
 
@@ -103,15 +104,14 @@ int openTx() {
         }     
     }
     if(alarmCount >= conParam.nRetransmissions || status < 0)
-        return -1;
+        return ERROR_CMD;
     gettimeofday(&start_t, NULL);
-    return fd;
+    return 1;
 }
 
 int openRx() {
-
     // Receive SET
-    if(receive_frame(fd, SET, LlTx) < 0) return -1;
+    if(receive_frame(fd, SET, LlTx) < 0) return ERROR_CMD;
     r_amnt_sets++;
     amnt_bytes+=FRAME_SIZE;
 
@@ -120,7 +120,7 @@ int openRx() {
     send_frame(fd, UA, LlRx, curr_num);
     amnt_uas++;
     gettimeofday(&start_t, NULL);
-    return fd;
+    return 1;
 }
 
 int llopen(LinkLayer connectionParameters)
@@ -133,8 +133,10 @@ int llopen(LinkLayer connectionParameters)
 
     fd = setupTermios(conParam.serialPort, conParam.baudRate, conParam.role);
 
-    if(fd < 0)
+    if(fd < 0) {
         perror("error: failed to setup new termios");
+        return ERROR_CMD;
+    }
 
     switch (conParam.role)
     {
@@ -142,7 +144,7 @@ int llopen(LinkLayer connectionParameters)
         case LlRx: return openRx();
     }
     
-    return -1;
+    return ERROR_CMD;
 }
 
 ////////////////////////////////////////////////
@@ -150,23 +152,18 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    //print_statistics();
-    unsigned char frame[MAX_PAYLOAD_SIZE];
+    unsigned char informationFrame[MAX_PAYLOAD_SIZE];
     int stop = FALSE, answer;
-    build_information_frame(frame, buf, bufSize, curr_num);
+
+    build_information_frame(informationFrame, buf, bufSize, curr_num);
     reset_alarm();
     next_number();
-    // do byte stuffing
-    // for(int i = 0; i < bufSize+6; i++) printf("%x - ", frame[i]);
-    // printf("\n BEFORE\n");
-    int frameSize = byte_stuffing(frame, bufSize);
-    // for(int i = 0; i < frameSize; i++) printf("%x - ", frame[i]);
-    // printf("\n AFTER\n");
 
-    // printf("before stuffing: %d - after stuffing: %d \n", bufSize, frameSize);
+    int frameSize = byte_stuffing(informationFrame, bufSize);
     int rejCount = 0;
+
     while(alarmCount < conParam.nRetransmissions && rejCount < conParam.nRetransmissions && !stop) {
-        send_information_frame(fd, frame, frameSize);
+        send_information_frame(fd, informationFrame, frameSize);
         amnt_bytes+=frameSize;
         amnt_is++;
         alarm(conParam.timeout);
@@ -194,7 +191,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
     }
     if(alarmCount >= conParam.nRetransmissions || answer < 0 || rejCount >= conParam.nRetransmissions)
-        return -1;
+        return ERROR_CMD;
 
     return frameSize;
 }
@@ -206,59 +203,54 @@ int llread(unsigned char *packet)
 {
     //print_statistics();
     int frameSize, validPacket = FALSE, bufSize;
-    unsigned char frame[MAX_PAYLOAD_SIZE];
+    unsigned char informationFrame[MAX_PAYLOAD_SIZE];
     int rejCount = 0;
     while (!validPacket && rejCount < conParam.nRetransmissions)
     {
-        int i = 0;
         int flags = 0;
         int bytes = 0;
 
-        // falta fazer algo com o numero de i's!!!!
-
-        while(flags < 2 && i < MAX_PAYLOAD_SIZE) {
-            int auxBytes = receive_information_frame(fd, frame+i);
-
-            // ESTES 2 MEGA IMPORTANTES
-            if(frame[i] != FLAG && i == 0) continue;
-            if(frame[i] == FLAG && i == 1 && flags == 1) continue;
-            ////////////
+        while(flags < 2 && bytes < MAX_PAYLOAD_SIZE) {
+            int auxBytes = receive_information_frame(fd, informationFrame+bytes);
 
             if(auxBytes != 1) {
-                printf("received nothing\n");
-                //perror("error: receive information frame failed");
-                return -1;
+                printf("llread: Didn't receive anything..\n");
+                return ERROR_CMD;
             }
-            // else printf("%x - ", frame[i]);
-            if(frame[i] == FLAG){
+            // ESTES 2 MEGA IMPORTANTES
+            if(informationFrame[bytes] != FLAG && bytes == 0) continue;
+            if(informationFrame[bytes] == FLAG && bytes == 1 && flags == 1) continue;
+            ////////////
+
+            if(informationFrame[bytes] == FLAG){
                flags++;
             }
             bytes++;
-            i++;
         }
 
-        if(i >= MAX_PAYLOAD_SIZE) {
+        // Send rej in case of receiving too many bytes before finding the 2 flags
+        if(bytes >= MAX_PAYLOAD_SIZE) {
             send_frame(fd, REJ, LlRx, curr_num);
             continue;
         }
 
         r_amnt_is++;
-        amnt_bytes+=i;
+        amnt_bytes+=bytes;
 
-        frameSize = byte_destuffing(frame, bytes-6);
+        frameSize = byte_destuffing(informationFrame, bytes-6);
         bufSize = frameSize - 6;
-        if((frame[1]^frame[2]) != frame[3]) {
-            printf("BCC1 Failed.. %x -- %x\n", (frame[1]^frame[2]),frame[3]);
+        if((informationFrame[1]^informationFrame[2]) != informationFrame[3]) {
+            printf("llread: BCC1 Failed.. %x -- %x\n", (informationFrame[1]^informationFrame[2]),informationFrame[3]);
         }
 
-        unsigned char BCC2 = frame[4];
+        unsigned char BCC2 = informationFrame[4];
         for(int i = 5; i < frameSize-2; i++) {
-            BCC2 ^= frame[i];
+            BCC2 ^= informationFrame[i];
         }
         
-        if(BCC2 != frame[frameSize-2]) {
-            printf("BCC2 Failed %x -- %x\n", BCC2 ,frame[frameSize-2]);
-            if((int)frame[2] != curr_num) {
+        if(BCC2 != informationFrame[frameSize-2]) {
+            printf("llread: BCC2 Failed %x -- %x\n", BCC2 ,informationFrame[frameSize-2]);
+            if((int)informationFrame[2] != curr_num) {
                 send_frame(fd, RR, LlRx, curr_num);
                 amnt_rrs++;
             }
@@ -269,19 +261,19 @@ int llread(unsigned char *packet)
             rejCount++;
             continue;
         }
-        if((int)frame[2] != curr_num) {
-            printf("Received duplicate, %d - %d\n", frame[2], curr_num);
+        if((int)informationFrame[2] != curr_num) {
+            printf("llread: Received duplicate, %d - %d\n", informationFrame[2], curr_num);
             send_frame(fd, RR, LlRx, curr_num);
             amnt_rrs++;
             continue;
         }
         
         validPacket = TRUE;
-        memcpy(packet, frame+4, bufSize);
+        memcpy(packet, informationFrame+4, bufSize);
     }
     if(rejCount >= conParam.nRetransmissions) {
-        perror("Too many rejs\n");
-        return -1;
+        perror("llread: Got too many rejecteds\n");
+        return ERROR_CMD;
     }
     //printf("llread: packet successfuly read\n");
     next_number();
@@ -319,7 +311,7 @@ int closeTx() {
 
     if(confirmation < 0) {
         perror("error: didn't receive DISC frame\n");
-        return -1;
+        return ERROR_CMD;
     } else {
         send_frame(fd, UA, LlTx, curr_num);
         amnt_bytes+=FRAME_SIZE;
@@ -335,7 +327,7 @@ int closeRx() {
 
 
     // Receive DISC
-    if(receive_frame(fd, DISC, LlTx) < 0) return -1;
+    if(receive_frame(fd, DISC, LlTx) < 0) return ERROR_CMD;
     amnt_bytes+=FRAME_SIZE;
     r_amnt_discs++;
     int confirmation;
@@ -359,9 +351,9 @@ int closeRx() {
     }
     if(alarmCount >= conParam.nRetransmissions) {
         perror("closeRx: timed out while receiving UA\n");
-        return -1;
+        return ERROR_CMD;
     }
-    printf("Received UA..\n");
+    printf("closeRx: Received UA sucessfully\n Shutting down..\n");
 
     return fd;
 }
@@ -370,25 +362,27 @@ int closeRx() {
 int llclose(int showStatistics)
 {
     // In case the connection was abruptly lost
-    if(showStatistics == -1) {
+    if(showStatistics == ERROR_CMD) {
         restoreTermios(fd);
-        return -1;
+        return ERROR_CMD;
     }
 
-    printf("Closing..\n");
+    printf("llclose: Closing..\n");
     int ret = 1;
     if(conParam.role == LlTx) {
-        if(closeTx() < 0) ret = -1;
+        if(closeTx() < 0) ret = ERROR_CMD;
     }
     else {
-        if(closeRx() < 0) ret = -1;
+        if(closeRx() < 0) ret = ERROR_CMD;
     }
+
 
     gettimeofday(&end_t, NULL);
     total_t = (double) (end_t.tv_sec - start_t.tv_sec)*1000000;
     total_t += (double) (end_t.tv_usec - start_t.tv_usec);
     total_t /= 1000000;
-    //if(showStatistics)
+
+    if(showStatistics)
         print_statistics();
 
     restoreTermios(fd);

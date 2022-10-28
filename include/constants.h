@@ -1,10 +1,7 @@
-//applicationLayer
+#ifndef _CONSTANTS_H_
+#define _CONSTANTS_H_
 
-// 5 bytes will never be stuffed, the rest could be twice as big
-// In frames: 2 Flags, 1 A byte, 1 C byte 
-// In packets: 1 C byte
-// 496*2 + 5 = 997, which is still under the maximum payload limit 
-#define MAX_READ_FILE 496
+//applicationLayer
 
 #define FILE_NAME_SIZE 128
 
@@ -36,10 +33,18 @@
 // Maximum number of bytes that application layer should send to link layer
 #define MAX_PAYLOAD_SIZE 1000
 
+
+// 5 bytes will never be stuffed, the rest could be twice as big
+// In frames: 2 Flags, 1 A byte, 1 C byte 
+// In packets: 1 C byte
+// 485*2 + 5 = 997, which is still under the maximum payload limit 
+#define MAX_READ_FILE (MAX_PAYLOAD_SIZE/2 - 15)
+
 // MISC
 #define FALSE 0
 #define TRUE 1
 #define _POSIX_SOURCE 1
+#define ERROR_CMD -1
 
 //packets
 #define C_DATA 0x01
@@ -50,7 +55,6 @@
 #define T_FILE_NAME 0x01
 
 #define PACKET_SIZE 256
-#define MAX_PACKET_SIZE 512
 
 //sndtermios
 #define FALSE 0
@@ -63,3 +67,5 @@
 #define BAUDRATE 9600
 #define N_TRIES 3
 #define TIMEOUT 4
+
+#endif // _CONSTANTS_H_

@@ -85,14 +85,14 @@ int receiveFile(const char *expectedFileName) {
     packetSize = llread(packet);
     if(packetSize < 0 || packet[0] != C_START) {
         perror("error: failed to read packet\n");
-        return -1;
+        return ERROR_CMD;
     }
 
     char fileName[FILE_NAME_SIZE];
     int fileSize = verify_control_packet(packet, TRUE, fileName);
     if(fileSize < 0) {
         perror("error: couldn't verify the start control packet\n");
-        return -1;
+        return ERROR_CMD;
     }
 
     char filePath[256] = "received-";
@@ -101,7 +101,7 @@ int receiveFile(const char *expectedFileName) {
     FILE *fp = fopen(filePath, "w");
     if(fp == NULL) {
         perror("error: couldn't create the file\n");
-        return -1;
+        return ERROR_CMD;
     }
 
     ////////////////////////////////////////////////
@@ -112,14 +112,14 @@ int receiveFile(const char *expectedFileName) {
         if(packetSize < 0) {
             fclose(fp);
             perror("error: failed to read packet\n");
-            return -1;
+            return ERROR_CMD;
         }
         if(packet[0] == C_END) break;
        // printf("receiveFile: \n");
         if(fwrite(packet + 4, sizeof(unsigned char), packetSize - 4, fp) != packetSize -4) {
             fclose(fp);
             perror("error: failed to write packet on file\n");
-            return -1;
+            return ERROR_CMD;
         }
         //sleep(4);
     }
@@ -133,12 +133,12 @@ int receiveFile(const char *expectedFileName) {
     if(verify_control_packet(packet, FALSE, auxFileName) < 0) {
         perror("error: couldn't verify the end control packet\n");
         fclose(fp);
-        return -1;
+        return ERROR_CMD;
     }
     if(strcmp(auxFileName, fileName) != 0 && strcmp(expectedFileName, fileName) != 0) {
         printf("error: file names differ : %s - %s - %s\n", fileName, auxFileName, expectedFileName);
         fclose(fp);
-        return -1;
+        return ERROR_CMD;
     }
 
     fclose(fp);
@@ -159,11 +159,11 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
     ll.baudRate = baudRate;
     ll.timeout = timeout;
-    ll.nRetransmissions = nTries;
+    ll.nRetransmissions = nTries + 1;
 
     if(llopen(ll) < 0) {
         perror("error: llopen failed");
-        llclose(-1);
+        llclose(ERROR_CMD);
         perror("error: probably connection lost...\n");
         return;
     }
@@ -175,7 +175,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("sending...\n");
         if(sendFile(filename) < 0) {
             perror("error: failed to send file\n");
-            llclose(-1);
+            llclose(ERROR_CMD);
             perror("error: probably connection lost...\n");
             return;
         }
@@ -184,7 +184,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         printf("receiving...\n");
         if(receiveFile(filename) < 0) {
             perror("error: failed to receive file\n");
-            llclose(-1);
+            llclose(ERROR_CMD);
             perror("error: probably connection lost...\n");
             return;
         }
@@ -192,7 +192,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         
         
 
-    if (llclose(0) < 0) {
+    if (llclose(TRUE) < 0) {
         perror("error: failed to terminate connection\n");
     } else {
         printf("Closed connection successfuly\n");

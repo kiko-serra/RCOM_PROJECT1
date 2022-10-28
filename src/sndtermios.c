@@ -39,7 +39,7 @@ int setupTermios(const char* serialPortName, int baudRate, int role) {
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME] = DEFAULT_VTIME;  // Inter-character timer unused
-    newtio.c_cc[VMIN] = (!role) ? DEFAULT_TX_VMIN : DEFAULT_RX_VMIN;    // Blocking read until 5 chars received
+    newtio.c_cc[VMIN] = role ? DEFAULT_RX_VMIN : DEFAULT_TX_VMIN;    // Blocking read until 5 chars received
     //newtio.c_cc[VMIN] = DEFAULT_TX_VMIN; 
     tcflush(fd, TCIOFLUSH);
 
