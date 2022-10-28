@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <time.h>
+#include <sys/time.h>
 
 
 #include "link_layer.h"
@@ -41,7 +41,7 @@ static int r_amnt_is = 0;
 
 int amnt_bytes = 0;
 
-clock_t start_t, end_t;
+struct timeval start_t, end_t;
 double total_t;
 
 
@@ -104,6 +104,7 @@ int openTx() {
     }
     if(alarmCount >= conParam.nRetransmissions || status < 0)
         return -1;
+    gettimeofday(&start_t, NULL);
     return fd;
 }
 
@@ -118,12 +119,12 @@ int openRx() {
     // Send UA
     send_frame(fd, UA, LlRx, curr_num);
     amnt_uas++;
+    gettimeofday(&start_t, NULL);
     return fd;
 }
 
 int llopen(LinkLayer connectionParameters)
 {
-    start_t = clock();
     // Setup alarm handler
 
     (void)signal(SIGALRM, alarmHandler);
@@ -140,7 +141,7 @@ int llopen(LinkLayer connectionParameters)
         case LlTx: return openTx();
         case LlRx: return openRx();
     }
-
+    
     return -1;
 }
 
@@ -383,8 +384,10 @@ int llclose(int showStatistics)
         if(closeRx() < 0) ret = -1;
     }
 
-    end_t = clock();
-    total_t = (double) (end_t - start_t) / CLOCKS_PER_SEC;
+    gettimeofday(&end_t, NULL);
+    total_t = (double) (end_t.tv_sec - start_t.tv_sec)*1000000;
+    total_t += (double) (end_t.tv_usec - start_t.tv_usec);
+    total_t /= 1000000;
     //if(showStatistics)
         print_statistics();
 
