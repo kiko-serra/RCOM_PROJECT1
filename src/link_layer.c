@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <time.h>
+
 
 #include "link_layer.h"
 #include "alarm.h"
@@ -39,6 +41,9 @@ static int r_amnt_is = 0;
 
 int amnt_bytes = 0;
 
+clock_t start_t, end_t;
+double total_t;
+
 
 void print_statistics() {
     printf("----- STATISTICS --------\n");
@@ -48,8 +53,10 @@ void print_statistics() {
     printf("SENT: RR: %d\n", amnt_rrs);
     printf("SENT: DISC: %d\n", amnt_discs);
     printf("SENT: I: %d\n", amnt_is);
-    if(conParam.role == LlTx)
+    if(conParam.role == LlTx) {
         printf("SENT: BYTES: %d\n", amnt_bytes);
+        printf("BYTES/SEC: %.4f\n", ((double) amnt_bytes) / total_t);
+    }
 
     printf("\nRECEIVED: SET: %d\n", r_amnt_sets);
     printf("RECEIVED: UA: %d\n", r_amnt_uas);
@@ -57,8 +64,10 @@ void print_statistics() {
     printf("RECEIVED: RR: %d\n", r_amnt_rrs);
     printf("RECEIVED: DISC: %d\n", r_amnt_discs); 
     printf("RECEIVED: I: %d\n", r_amnt_is); 
-    if(conParam.role == LlRx)
+    if(conParam.role == LlRx) {
         printf("RECEIVED: BYTES: %d\n", amnt_bytes);
+        printf("BYTES/SEC: %.4f\n", ((double) amnt_bytes) / total_t);
+    }
     printf("-------------------------\n");
 
 }
@@ -114,7 +123,9 @@ int openRx() {
 
 int llopen(LinkLayer connectionParameters)
 {
+    start_t = clock();
     // Setup alarm handler
+
     (void)signal(SIGALRM, alarmHandler);
     // Setup connection parameters
     conParam = connectionParameters;
@@ -372,6 +383,8 @@ int llclose(int showStatistics)
         if(closeRx() < 0) ret = -1;
     }
 
+    end_t = clock();
+    total_t = (double) (end_t - start_t) / CLOCKS_PER_SEC;
     //if(showStatistics)
         print_statistics();
 
