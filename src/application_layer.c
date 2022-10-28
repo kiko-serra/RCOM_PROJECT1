@@ -6,15 +6,7 @@
 #include "application_layer.h"
 #include "link_layer.h"
 #include "packets.h"
-
-// 5 bytes will never be stuffed, the rest could be twice as big
-// In frames: 2 Flags, 1 A byte, 1 C byte 
-// In packets: 1 C byte
-// 496*2 + 5 = 997, which is still under the maximum payload limit 
-#define MAX_READ_FILE 496
-
-
-#define FILE_NAME_SIZE 128
+#include "constants.h"
 
 // Opens the file passed by the parameter
 // Builds and sends a control packet to the receiver signing it as it is starting to send packets
