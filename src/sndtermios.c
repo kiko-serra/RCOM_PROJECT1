@@ -9,16 +9,7 @@
 #include <termios.h>
 
 // #include "termios.h"
-
-
-#define DEFAULT_BAUDRATE B38400
-#define _POSIX_SOURCE 1 // POSIX compliant source
-
-#define FALSE 0
-#define TRUE 1
-#define DEFAULT_VTIME 0
-#define DEFAULT_TX_VMIN 0
-#define DEFAULT_RX_VMIN 1
+#include "constants.h"
 
 struct termios oldtio;
 
@@ -48,8 +39,8 @@ int setupTermios(const char* serialPortName, int baudRate, int role) {
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME] = DEFAULT_VTIME;  // Inter-character timer unused
-    newtio.c_cc[VMIN] = (!role) ? DEFAULT_TX_VMIN : DEFAULT_RX_VMIN;    // Blocking read until 5 chars received
-
+    newtio.c_cc[VMIN] = role ? DEFAULT_RX_VMIN : DEFAULT_TX_VMIN;    // Blocking read until 5 chars received
+    //newtio.c_cc[VMIN] = DEFAULT_TX_VMIN; 
     tcflush(fd, TCIOFLUSH);
 
     // Set new port settings

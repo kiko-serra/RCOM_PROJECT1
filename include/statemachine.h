@@ -1,5 +1,5 @@
-#ifndef _SETSTATEMACHINE_H_
-#define _SETSTATEMACHINE_H_
+#ifndef _STATEMACHINE_H_
+#define _STATEMACHINE_H_
 
 #include "frame.h"
 
@@ -35,4 +35,4 @@ void changeState(StateMachine *sm, State state);
 void handleStateMachine(StateMachine *sm, unsigned char byte, unsigned char *frame);
 
 
-#endif // _SETSTATEMACHINE_H_
+#endif // _STATEMACHINE_H_
