@@ -2,28 +2,7 @@
 #define _FRAME_H_
 
 #include "link_layer.h"
-
-#define C_SET 0x03
-#define C_DISC 0x0B
-#define C_UA 0x07
-#define C_RR 0x05 //0x85
-#define C_REJ 0x01 //0x81
-
-#define A_TRANSMITTER_CMD 0x03
-#define A_RECEIVER_REP 0x03
-#define A_TRANSMITTER_REP 0x01
-#define A_RECEIVER_CMD 0x01
-
-#define C_CTRL_1 0x00 
-#define C_CTRL_2 0x01
-
-#define FLAG 0x7e
-#define COMP_FLAG 0x5e
-
-#define ESC 0x7d
-#define COMP_ESC 0x5d
-
-#define FRAME_SIZE 5
+#include "constants.h"
 
 typedef enum { I, SET, DISC, UA, RR,REJ, NONE } FrameType;
 
