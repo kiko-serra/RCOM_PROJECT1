@@ -1,5 +1,6 @@
 Protocolo de Ligação de Dados (1st Lab Work)
 
+Nota: 18.0
 ---------------------------------------------------
 
 Instructions to Run the Project
